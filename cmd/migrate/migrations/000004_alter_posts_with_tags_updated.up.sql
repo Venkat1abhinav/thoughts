@@ -1,0 +1,5 @@
+ALTER TABLE posts
+ADD COLUMN tags text [];
+
+ALTER TABLE posts
+ADD updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
