@@ -1,2 +1,7 @@
-alter table posts drop column tags;
-alter table posts drop column updated_at;
+ALTER TABLE posts
+DROP COLUMN tags;
+
+ALTER TABLE posts
+DROP COLUMN updated_at;
+
+

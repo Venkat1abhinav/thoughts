@@ -29,29 +29,32 @@ type PostUpdate struct {
 func (app *application) createPostHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var post PostCreate
+
 		if err := readJSON(w, r, &post); err != nil {
 			app.badRequestError(w, r, err)
 			return
 		}
+
 		if err := Validate.Struct(post); err != nil {
 			app.badRequestError(w, r, err)
 			return
 		}
+
 		ctx := r.Context()
+
 		createdPost := &store.Post{
 			Content: post.Content,
 			Title:   post.Title,
 			UserID:  post.UserID,
 			Tags:    post.Tags,
 		}
-		if err := app.store.Posts.Create(
-			ctx,
-			createdPost,
-		); err != nil {
+
+		if err := app.store.Posts.Create(ctx, createdPost); err != nil {
 			app.internalServerError(w, r, err)
 			return
 		}
-		if err := writeJSON(
+
+		if err := app.jsonResponse(
 			w,
 			http.StatusCreated,
 			createdPost,
@@ -66,7 +69,7 @@ func (app *application) getPostHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		post, err := app.getPostByContext(r)
 		if err != nil {
-			app.badRequestError(w, r, err)
+			app.internalServerError(w, r, err)
 			return
 		}
 
@@ -81,15 +84,24 @@ func (app *application) getPostHandler() http.HandlerFunc {
 
 		post.Comments = comments
 
-		if err := writeJSON(w, http.StatusOK, post); err != nil {
+		if err := app.jsonResponse(
+			w,
+			http.StatusOK,
+			post,
+		); err != nil {
 			app.internalServerError(w, r, err)
+			return
 		}
 	}
 }
 
 func (app *application) deletePostHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+		id, err := strconv.ParseInt(
+			chi.URLParam(r, "id"),
+			10,
+			64,
+		)
 		if err != nil {
 			app.badRequestError(w, r, err)
 			return
@@ -97,8 +109,7 @@ func (app *application) deletePostHandler() http.HandlerFunc {
 
 		ctx := r.Context()
 
-		err = app.store.Posts.DeleteByID(ctx, id)
-		if err != nil {
+		if err := app.store.Posts.DeleteByID(ctx, id); err != nil {
 			if errors.Is(err, store.ErrNotFound) {
 				app.notFoundError(w, r, err)
 				return
@@ -120,25 +131,39 @@ func (app *application) updatePostHandler() http.HandlerFunc {
 			return
 		}
 
-		var payload PostUpdate
+		var input PostUpdate
 
-		if err := readJSON(w, r, &payload); err != nil {
+		if err := readJSON(w, r, &input); err != nil {
 			app.badRequestError(w, r, err)
 			return
 		}
 
-		if err := Validate.Struct(payload); err != nil {
+		if err := Validate.Struct(input); err != nil {
 			app.badRequestError(w, r, err)
 			return
 		}
 
-		ctx := r.Context()
+		if input.Title == nil && input.Content == nil {
+			app.badRequestError(
+				w,
+				r,
+				errors.New("at least one field must be provided"),
+			)
+			return
+		}
+
+		if input.Title != nil {
+			post.Title = *input.Title
+		}
+
+		if input.Content != nil {
+			post.Content = *input.Content
+		}
+		post.Content = *input.Content
 
 		updatedPost, err := app.store.Posts.UpdateByID(
-			ctx,
-			*payload.Title,
-			*payload.Content,
-			post.ID,
+			r.Context(),
+			post,
 		)
 		if err != nil {
 			if errors.Is(err, store.ErrNotFound) {
@@ -150,7 +175,10 @@ func (app *application) updatePostHandler() http.HandlerFunc {
 			return
 		}
 
-		comments, err := app.store.Comments.GetPostByID(ctx, post.ID)
+		comments, err := app.store.Comments.GetPostByID(
+			r.Context(),
+			post.ID,
+		)
 		if err != nil {
 			app.internalServerError(w, r, err)
 			return
@@ -158,16 +186,27 @@ func (app *application) updatePostHandler() http.HandlerFunc {
 
 		updatedPost.Comments = comments
 
-		if err := writeJSON(w, http.StatusOK, updatedPost); err != nil {
+		if err := app.jsonResponse(
+			w,
+			http.StatusOK,
+			updatedPost,
+		); err != nil {
 			app.internalServerError(w, r, err)
+			return
 		}
 	}
 }
 
-func (app *application) postsContextMiddleware(next http.Handler) http.Handler {
+func (app *application) postsContextMiddleware(
+	next http.Handler,
+) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+			id, err := strconv.ParseInt(
+				chi.URLParam(r, "id"),
+				10,
+				64,
+			)
 			if err != nil {
 				app.badRequestError(w, r, err)
 				return
@@ -187,18 +226,23 @@ func (app *application) postsContextMiddleware(next http.Handler) http.Handler {
 			}
 
 			ctx = context.WithValue(ctx, postKey, post)
-			next.ServeHTTP(w, r.WithContext(ctx))
+
+			next.ServeHTTP(
+				w,
+				r.WithContext(ctx),
+			)
 		},
 	)
 }
 
-func (app *application) getPostByContext(r *http.Request) (*store.Post, error) {
-	ctx := r.Context()
-
-	post, ok := ctx.Value(postKey).(*store.Post)
-
-	if !ok {
-		return nil, errors.New("could not retrive the the post from the request")
+func (app *application) getPostByContext(
+	r *http.Request,
+) (*store.Post, error) {
+	post, ok := r.Context().Value(postKey).(*store.Post)
+	if !ok || post == nil {
+		return nil, errors.New(
+			"could not retrieve post from request context",
+		)
 	}
 
 	return post, nil
