@@ -32,7 +32,6 @@ type dbConfig struct {
 func (app *application) mount() http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
@@ -47,6 +46,10 @@ func (app *application) mount() http.Handler {
 				r.Get("/", app.getPostHandler())
 				r.Delete("/", app.deletePostHandler())
 				r.Patch("/", app.updatePostHandler())
+				r.Route("/comments", func(r chi.Router) {
+					r.Post("/", app.createCommentHandler())
+					r.Get("/", app.getCommentsHandler())
+				})
 			})
 		})
 	})

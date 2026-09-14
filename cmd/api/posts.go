@@ -73,7 +73,7 @@ func (app *application) getPostHandler() http.HandlerFunc {
 			return
 		}
 
-		comments, err := app.store.Comments.GetPostByID(
+		comments, err := app.store.Comments.GetCommentsByPostID(
 			r.Context(),
 			post.ID,
 		)
@@ -159,23 +159,26 @@ func (app *application) updatePostHandler() http.HandlerFunc {
 		if input.Content != nil {
 			post.Content = *input.Content
 		}
-		post.Content = *input.Content
 
 		updatedPost, err := app.store.Posts.UpdateByID(
 			r.Context(),
 			post,
 		)
 		if err != nil {
-			if errors.Is(err, store.ErrNotFound) {
+			switch {
+			case errors.Is(err, store.ErrNotFound):
 				app.notFoundError(w, r, err)
 				return
+			case errors.Is(err, store.ErrVersionConflict):
+				app.confictError(w, r, err)
+				return
+			default:
+				app.internalServerError(w, r, err)
+				return
 			}
-
-			app.internalServerError(w, r, err)
-			return
 		}
 
-		comments, err := app.store.Comments.GetPostByID(
+		comments, err := app.store.Comments.GetCommentsByPostID(
 			r.Context(),
 			post.ID,
 		)

@@ -2,13 +2,15 @@ package store
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type User struct {
-	ID        string    `json:"id"`
+	ID        int64     `json:"id"`
 	Username  string    `json:"username"`
 	FirstName string    `json:"first_name"`
 	LastName  string    `json:"last_name"`
@@ -23,8 +25,8 @@ type UsersStore struct {
 
 func (s *UsersStore) Create(ctx context.Context, u *User) error {
 	query := `
-	Insert into users (username, first_name, last_name, email, password, created_at)
-	Values ($1, $2, $3, $4, $5, $6) RETURNING id, created_at
+	Insert into users (username, first_name, last_name, email, password)
+	Values ($1, $2, $3, $4, $5) RETURNING id, created_at
 	`
 
 	ctx, cancel := context.WithTimeout(ctx, QueryTimeOut)
@@ -48,4 +50,74 @@ func (s *UsersStore) Create(ctx context.Context, u *User) error {
 	}
 
 	return nil
+}
+
+func (s *UsersStore) CreateMany(
+	ctx context.Context,
+	users []*User,
+) error {
+	if len(users) == 0 {
+		return nil
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, QueryTimeOut)
+	defer cancel()
+
+	args := make([]any, 0, len(users)*5)
+	values := make([]string, 0, len(users))
+
+	for i, u := range users {
+		offset := i * 5
+
+		values = append(values, fmt.Sprintf(
+			"($%d, $%d, $%d, $%d, $%d)",
+			offset+1,
+			offset+2,
+			offset+3,
+			offset+4,
+			offset+5,
+		))
+
+		args = append(
+			args,
+			u.Username,
+			u.FirstName,
+			u.LastName,
+			u.Email,
+			u.Password,
+		)
+	}
+
+	query := fmt.Sprintf(`
+		INSERT INTO users (
+			username,
+			first_name,
+			last_name,
+			email,
+			password
+		)
+		VALUES %s
+		RETURNING id, created_at
+	`, strings.Join(values, ", "))
+
+	rows, err := s.db.Query(ctx, query, args...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for i := range users {
+		if !rows.Next() {
+			return rows.Err()
+		}
+
+		if err := rows.Scan(
+			&users[i].ID,
+			&users[i].CreatedAt,
+		); err != nil {
+			return err
+		}
+	}
+
+	return rows.Err()
 }

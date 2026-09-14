@@ -4,7 +4,7 @@ MIGRATIONS_PATH := ./cmd/migrate/migrations
 
 DATABASE_URL := postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@localhost:$(POSTGRES_PORT)/$(POSTGRES_DB)?sslmode=disable
 
-.PHONY: run build test fmt vet migrate-create migrate-up migrate-down migrate-force db-up db-down db-reset
+.PHONY: run build test fmt vet migrate-create migrate-up migrate-down migrate-force db-up db-down db-reset seed
 
 run:
 	go run ./cmd/api
@@ -42,3 +42,7 @@ db-down:
 db-reset:
 	podman compose down -v
 	podman compose up -d
+
+
+seed:
+	go run cmd/migrate/seed/main.go

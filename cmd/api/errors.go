@@ -31,3 +31,11 @@ func (app *application) notFoundError(w http.ResponseWriter, r *http.Request, er
 		log.Println(err.Error())
 	}
 }
+
+func (app *application) confictError(w http.ResponseWriter, r *http.Request, err error) {
+	log.Printf("not found error method: %s path: %s error: %s\n", r.Method, r.URL.Path, err)
+	err = writeJSONError(w, http.StatusConflict, err.Error())
+	if err != nil {
+		log.Println(err.Error())
+	}
+}
