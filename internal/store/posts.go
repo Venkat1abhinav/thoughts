@@ -3,6 +3,9 @@ package store
 import (
 	"context"
 	"errors"
+	"fmt"
+	"log"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -168,14 +171,98 @@ func (s *PostsStore) UpdateByID(
 		&post.CreatedAt,
 		&post.UpdatedAt,
 	)
+	if err == nil {
+		return &post, nil
+	}
+
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return nil, err
+	}
+
+	var exists bool
+
+	err = s.db.QueryRow(
+		ctx,
+		`SELECT EXISTS(SELECT 1 FROM posts WHERE id = $1)`,
+		post.ID,
+	).Scan(&exists)
+
+	log.Println(exists)
 	if err != nil {
-		switch {
-		case errors.Is(err, pgx.ErrNoRows):
-			return nil, ErrNotFound
-		default:
-			return nil, err
+		return nil, err
+	}
+
+	if exists {
+		return nil, ErrNotFound
+	}
+
+	return nil, ErrVersionConflict
+}
+
+func (s *PostsStore) CreateMany(
+	ctx context.Context,
+	posts []*Post,
+) error {
+	if len(posts) == 0 {
+		return nil
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, QueryTimeOut)
+	defer cancel()
+
+	args := make([]any, 0, len(posts)*4)
+	values := make([]string, 0, len(posts))
+
+	for i, p := range posts {
+		offset := i * 4
+
+		values = append(values, fmt.Sprintf(
+			"($%d, $%d, $%d, $%d)",
+			offset+1,
+			offset+2,
+			offset+3,
+			offset+4,
+		))
+
+		args = append(
+			args,
+			p.Content,
+			p.Title,
+			p.UserID,
+			p.Tags,
+		)
+	}
+
+	query := fmt.Sprintf(`
+		INSERT INTO posts (
+			content,
+			title,
+			user_id,
+			tags
+		)
+		VALUES %s
+		RETURNING id, created_at, updated_at
+	`, strings.Join(values, ", "))
+
+	rows, err := s.db.Query(ctx, query, args...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for i := range posts {
+		if !rows.Next() {
+			return rows.Err()
+		}
+
+		if err := rows.Scan(
+			&posts[i].ID,
+			&posts[i].CreatedAt,
+			&posts[i].UpdatedAt,
+		); err != nil {
+			return err
 		}
 	}
 
-	return &post, nil
+	return rows.Err()
 }

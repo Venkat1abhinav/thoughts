@@ -10,8 +10,9 @@ import (
 )
 
 var (
-	ErrNotFound  error         = errors.New("record not found")
-	QueryTimeOut time.Duration = time.Second * 5
+	ErrNotFound        error         = errors.New("record not found")
+	QueryTimeOut       time.Duration = time.Second * 5
+	ErrVersionConflict error         = errors.New("post version conflict")
 )
 
 type Store struct {
@@ -20,12 +21,16 @@ type Store struct {
 		GetByID(context.Context, int64) (*Post, error)
 		DeleteByID(context.Context, int64) error
 		UpdateByID(ctx context.Context, post *Post) (*Post, error)
+		CreateMany(context.Context, []*Post) error
 	}
 	Users interface {
 		Create(context.Context, *User) error
+		CreateMany(context.Context, []*User) error
 	}
 	Comments interface {
-		GetPostByID(context.Context, int64) ([]Comment, error)
+		GetCommentsByPostID(context.Context, int64) ([]Comment, error)
+		Create(context.Context, *Comment) error
+		CreateMany(context.Context, []*Comment) error
 	}
 }
 
