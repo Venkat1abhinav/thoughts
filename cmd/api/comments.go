@@ -6,8 +6,6 @@ import (
 	"github.com/owned_dragon/thoughts/internal/store"
 )
 
-const commentKey contextKey = "comment"
-
 type CommentCreate struct {
 	Content string `json:"content" validate:"required"`
 }

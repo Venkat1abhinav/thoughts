@@ -37,7 +37,7 @@ func (s *PostsStore) GetUserFeed(ctx context.Context, userID int64, fq Paginated
 	}
 	defer rows.Close()
 
-	feed, err := pgx.CollectRows[*PostsWithMetaData](
+	feed, err := pgx.CollectRows(
 		rows,
 		func(row pgx.CollectableRow) (*PostsWithMetaData, error) {
 			var post PostsWithMetaData
