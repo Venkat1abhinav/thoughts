@@ -13,17 +13,22 @@ import (
 )
 
 type Post struct {
-	ID        int64     `json:"id"`
-	Content   string    `json:"content"`
-	Title     string    `json:"title"`
-	UserID    int64     `json:"user_id"`
-	Tags      []string  `json:"tags"`
-	Version   int       `json:"version"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Comments  []Comment `json:"comments"`
+	ID        int64     `json:"id" db:"id"`
+	Content   string    `json:"content" db:"content"`
+	Title     string    `json:"title" db:"title"`
+	UserID    int64     `json:"user_id" db:"user_id"`
+	Tags      []string  `json:"tags" db:"tags"`
+	Version   int       `json:"version" db:"version"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+	Comments  []Comment `json:"comments" db:"comments"`
 }
 
+type PostsWithMetaData struct {
+	Post
+	Username     string `json:"username"`
+	CommentCount int    `json:"comments_count"`
+}
 type PostGet struct {
 	Content string    `json:"content"`
 	Title   string    `json:"title"`

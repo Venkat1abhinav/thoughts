@@ -12,7 +12,7 @@ type Comment struct {
 	ID        int64     `json:"id"`
 	PostID    int64     `json:"post_id"`
 	UserID    int64     `json:"user_id"`
-	Content   string    `json:"cotent"`
+	Content   string    `json:"content"`
 	CreatedAt time.Time `json:"created_at"`
 	User      User      `json:"user"`
 }
@@ -96,6 +96,67 @@ func (s *CommentsStore) Create(ctx context.Context, comment *Comment) error {
 	return nil
 }
 
+func (s *CommentsStore) GetCommentsByPostsID(
+	ctx context.Context,
+	postIDs []int64,
+) (map[int64][]Comment, error) {
+	query := `
+		SELECT
+			c.id,
+			c.post_id,
+			c.user_id,
+			c.content,
+			c.created_at,
+			u.username
+		FROM comments AS c
+		JOIN users AS u ON u.id = c.user_id
+		WHERE c.post_id = ANY($1::bigint[])
+		ORDER BY c.created_at DESC
+	`
+
+	ctx, cancel := context.WithTimeout(ctx, QueryTimeOut)
+	defer cancel()
+
+	rows, err := s.db.Query(ctx,
+		query,
+		postIDs,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	comments, err := pgx.CollectRows(
+		rows,
+		func(row pgx.CollectableRow) (Comment, error) {
+			var c Comment
+
+			err := row.Scan(
+				&c.ID,
+				&c.PostID,
+				&c.UserID,
+				&c.Content,
+				&c.CreatedAt,
+				&c.User.Username,
+			)
+
+			return c, err
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	grouped := make(map[int64][]Comment)
+
+	for _, comment := range comments {
+		grouped[comment.PostID] = append(
+			grouped[comment.PostID],
+			comment,
+		)
+	}
+
+	return grouped, nil
+}
 func (s *CommentsStore) CreateMany(
 	ctx context.Context,
 	comments []*Comment,
@@ -103,9 +164,6 @@ func (s *CommentsStore) CreateMany(
 	if len(comments) == 0 {
 		return nil
 	}
-
-	ctx, cancel := context.WithTimeout(ctx, QueryTimeOut)
-	defer cancel()
 
 	_, err := s.db.CopyFrom(
 		ctx,
