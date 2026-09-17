@@ -23,7 +23,7 @@ type Store struct {
 		DeleteByID(context.Context, int64) error
 		UpdateByID(ctx context.Context, post *Post) (*Post, error)
 		CreateMany(context.Context, []*Post) error
-		GetUserFeed(ctx context.Context, user_id int64, fq PaginatedFeedQuery) ([]*PostsWithMetaData, error)
+		GetUserFeed(ctx context.Context, userID int64, fq PaginatedFeedQuery) ([]*PostsWithMetaData, error)
 	}
 	Users interface {
 		Create(context.Context, *User) error

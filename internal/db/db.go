@@ -33,6 +33,9 @@ func New(addr string,
 	config.MaxConnIdleTime = maxIdleDurationm
 
 	db, err := pgxpool.NewWithConfig(ctx, config)
+	if err != nil {
+		return nil, err
+	}
 
 	if err := db.Ping(ctx); err != nil {
 		return nil, err
