@@ -95,7 +95,7 @@ func generateUsers(num int) []*store.User {
 			FirstName: firstName,
 			LastName:  lastName,
 			Email:     username + "@example.com",
-			Password:  gofakeit.Password(true, false, true, false, false, 12),
+			Password:  []byte(gofakeit.Password(true, false, true, false, false, 12)),
 		}
 	}
 
@@ -107,6 +107,7 @@ func generatePost(userID int64) *store.Post {
 		UserID:  userID,
 		Title:   gofakeit.Sentence(5),
 		Content: gofakeit.Paragraph(2, 4, 10, " "),
+		Tags:    gofakeit.Product().Categories,
 	}
 }
 
@@ -121,8 +122,9 @@ func generateComments(
 		user := users[gofakeit.Number(0, len(users)-1)]
 
 		comments[i] = &store.Comment{
-			PostID:  postID,
-			UserID:  user.ID,
+			PostID: postID,
+			UserID: user.ID,
+
 			Content: gofakeit.Paragraph(1, 3, 8, " "),
 		}
 	}

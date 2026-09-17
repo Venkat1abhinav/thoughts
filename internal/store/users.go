@@ -2,10 +2,12 @@ package store
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -15,7 +17,7 @@ type User struct {
 	FirstName string    `json:"first_name"`
 	LastName  string    `json:"last_name"`
 	Email     string    `json:"email"`
-	Password  string    `json:"-"`
+	Password  []byte    `json:"-"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
@@ -50,6 +52,45 @@ func (s *UsersStore) Create(ctx context.Context, u *User) error {
 	}
 
 	return nil
+}
+
+func (s *UsersStore) GetByID(ctx context.Context, id int64) (*User, error) {
+	query := `
+	SELECT id, username, first_name, last_name, email, password, created_at
+	from users
+	WHERE id=$1
+	`
+
+	var user User
+	ctx, cancel := context.WithTimeout(ctx, QueryTimeOut)
+
+	defer cancel()
+
+	err := s.db.QueryRow(
+		ctx,
+		query,
+		id,
+	).Scan(
+		&user.ID,
+		&user.Username,
+		&user.FirstName,
+		&user.LastName,
+		&user.Email,
+		&user.Password,
+		&user.CreatedAt,
+	)
+
+	if err != nil {
+		switch {
+		case errors.Is(err, pgx.ErrNoRows):
+			return nil, ErrNotFound
+		default:
+			return nil, err
+		}
+	}
+
+	return &user, nil
+
 }
 
 func (s *UsersStore) CreateMany(

@@ -18,24 +18,21 @@ func New(addr string,
 		time.Second*5,
 	)
 	defer cancel()
-	db, err := pgxpool.New(
-		ctx,
-		addr,
-	)
-	if err != nil {
-		return nil, err
-	}
-
 	log.Println("database connected")
 	maxIdleDurationm, err := time.ParseDuration(maxIdleTime)
 	if err != nil {
 		return nil, err
 	}
 
-	config := db.Config()
+	config, err := pgxpool.ParseConfig(addr)
+	if err != nil {
+		return nil, err
+	}
 	config.MaxConns = int32(maxOpenConns)
 	config.MinConns = int32(maxIdleConns)
 	config.MaxConnIdleTime = maxIdleDurationm
+
+	db, err := pgxpool.NewWithConfig(ctx, config)
 
 	if err := db.Ping(ctx); err != nil {
 		return nil, err
