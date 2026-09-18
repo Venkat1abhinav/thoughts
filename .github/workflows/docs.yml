@@ -34,13 +34,13 @@ jobs:
           cp api/openapi.yaml _site/openapi.yaml
 
       - name: Setup Pages
-        uses: actions/configure-pages@v5
+  uses: actions/configure-pages@v5
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: "_site"
+- name: Upload artifact
+  uses: actions/upload-pages-artifact@v4
+  with:
+    path: "_site"
 
-      - name: Deploy
-        id: deployment
-        uses: actions/deploy-pages@v4
+- name: Deploy
+  id: deployment
+  uses: actions/deploy-pages@v4
