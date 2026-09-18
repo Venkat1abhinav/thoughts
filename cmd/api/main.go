@@ -8,6 +8,12 @@ import (
 	"github.com/owned_dragon/thoughts/internal/store"
 )
 
+//	@title			thoughts API
+//	@version		1.0
+//	@description	Rest API for Thoughs a Distraction Free Social Application
+//	@host			localhost:3000
+//	@BasePath		/
+
 func main() {
 	dsn := "postgres://admin:admin123@localhost:5432/thoughts?sslmode=disable"
 	dbConfig := dbConfig{

@@ -2,41 +2,51 @@ package main
 
 import (
 	"net/http"
+	"strings"
 
+	"github.com/owned_dragon/thoughts/gen/api"
 	"github.com/owned_dragon/thoughts/internal/store"
 )
 
-func (app *application) getUserFeedHandler() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		fq := store.PaginatedFeedQuery{
-			Limit:  20,
-			Offset: 0,
-			Sort:   "desc",
-		}
+func (app *application) GetFeed(
+	w http.ResponseWriter,
+	r *http.Request,
+	params api.GetFeedParams,
+) {
+	fq := store.PaginatedFeedQuery{
+		Limit:  20,
+		Offset: 0,
+		Sort:   "desc",
+	}
 
-		fq, err := fq.Parse(r)
+	if params.Limit != nil {
+		fq.Limit = *params.Limit
+	}
 
-		if err != nil {
-			app.badRequestError(w, r, err)
-			return
-		}
+	if params.Offset != nil {
+		fq.Offset = *params.Offset
+	}
 
-		if err := Validate.Struct(fq); err != nil {
-			app.badRequestError(w, r, err)
-			return
-		}
+	if params.Search != nil {
+		fq.Search = *params.Search
+	}
 
-		ctx := r.Context()
-		feed, err := app.store.Posts.GetUserFeed(ctx, int64(4), fq)
+	if params.Tags != nil {
+		fq.Tags = strings.Split(*params.Tags, ",")
+	}
 
-		if err != nil {
-			app.internalServerError(w, r, err)
-			return
-		}
+	if err := Validate.Struct(fq); err != nil {
+		app.badRequestError(w, r, err)
+		return
+	}
 
-		if err := app.jsonResponse(w, http.StatusOK, feed); err != nil {
-			app.internalServerError(w, r, err)
-			return
-		}
+	feed, err := app.store.Posts.GetUserFeed(r.Context(), 1, fq)
+	if err != nil {
+		app.internalServerError(w, r, err)
+		return
+	}
+
+	if err := app.jsonResponse(w, http.StatusOK, feed); err != nil {
+		app.internalServerError(w, r, err)
 	}
 }

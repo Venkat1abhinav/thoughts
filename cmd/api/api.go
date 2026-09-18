@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/owned_dragon/thoughts/gen/api"
 	"github.com/owned_dragon/thoughts/internal/store"
 )
 
@@ -15,6 +16,8 @@ type application struct {
 	store   store.Store
 	version string
 }
+
+var _ api.ServerInterface = (*application)(nil)
 
 type config struct {
 	addr     string
@@ -31,41 +34,21 @@ type dbConfig struct {
 
 func (app *application) mount() http.Handler {
 	r := chi.NewRouter()
+
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-
 	r.Use(middleware.Timeout(60 * time.Second))
-	r.Get("/", app.healthCheckHandler())
-	r.Route("/v1", func(r chi.Router) {
-		r.Get("/health", app.healthCheckHandler())
-		r.Route("/posts", func(r chi.Router) {
-			r.Post("/", app.createPostHandler())
-			r.Route("/{id}", func(r chi.Router) {
-				r.Use(app.postsContextMiddleware)
-				r.Get("/", app.getPostHandler())
-				r.Delete("/", app.deletePostHandler())
-				r.Patch("/", app.updatePostHandler())
-				r.Route("/comments", func(r chi.Router) {
-					r.Post("/", app.createCommentHandler())
-					r.Get("/", app.getCommentsHandler())
-				})
-			})
-		})
-		r.Route("/users", func(r chi.Router) {
-			r.Route("/{id}", func(r chi.Router) {
-				r.Use(app.usersContextMiddleware)
-				r.Get("/", app.getUserHandler())
-				r.Route("/follower", func(r chi.Router) {
-					r.Put("/follow", app.followUserHanlder())
-					r.Put("/unfollow", app.unfollowUserHanlder())
-				})
-			})
-			r.Group(func(r chi.Router) {
-				r.Get("/feed", app.getUserFeedHandler())
-			})
-		})
+	r.Get("/docs", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "web/docs.html")
 	})
+
+	r.Get("/openapi.yaml", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "api/openapi.yaml")
+	})
+
+	api.HandlerFromMux(app, r)
+
 	return r
 }
 

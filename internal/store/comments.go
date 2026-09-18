@@ -117,7 +117,8 @@ func (s *CommentsStore) GetCommentsByPostsID(
 	ctx, cancel := context.WithTimeout(ctx, QueryTimeOut)
 	defer cancel()
 
-	rows, err := s.db.Query(ctx,
+	rows, err := s.db.Query(
+		ctx,
 		query,
 		postIDs,
 	)
@@ -157,6 +158,7 @@ func (s *CommentsStore) GetCommentsByPostsID(
 
 	return grouped, nil
 }
+
 func (s *CommentsStore) CreateMany(
 	ctx context.Context,
 	comments []*Comment,

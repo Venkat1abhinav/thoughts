@@ -1,0 +1,458 @@
+openapi: 3.0.3
+
+info:
+  title: Thoughts API
+  version: 1.0.0
+  description: API for the Thoughts application
+
+servers:
+  - url: http://localhost:3000
+
+paths:
+  /:
+    get:
+      operationId: healthCheckRoot
+      summary: Health check
+      responses:
+        "200":
+          description: Server is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /v1/health:
+    get:
+      operationId: healthCheck
+      summary: Health check
+      responses:
+        "200":
+          description: Server is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /v1/posts:
+    post:
+      operationId: createPost
+      summary: Create a post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PostCreate"
+      responses:
+        "201":
+          description: Post created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /v1/posts/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+
+    get:
+      operationId: getPost
+      summary: Get a post
+      responses:
+        "200":
+          description: Post
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+    delete:
+      operationId: deletePost
+      summary: Delete a post
+      responses:
+        "204":
+          description: Post deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+    patch:
+      operationId: updatePost
+      summary: Update a post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PostUpdate"
+      responses:
+        "200":
+          description: Post updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Version conflict
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /v1/posts/{id}/comments:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+
+    post:
+      operationId: createComment
+      summary: Create a comment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CommentCreate"
+      responses:
+        "201":
+          description: Comment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Comment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+    get:
+      operationId: getComments
+      summary: Get comments
+      responses:
+        "200":
+          description: Comments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Comment"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /v1/users/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+
+    get:
+      operationId: getUser
+      summary: Get a user
+      responses:
+        "200":
+          description: User
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /v1/users/{id}/follower/follow:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+
+    put:
+      operationId: followUser
+      summary: Follow a user
+      responses:
+        "204":
+          description: User followed
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /v1/users/{id}/follower/unfollow:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+
+    put:
+      operationId: unfollowUser
+      summary: Unfollow a user
+      responses:
+        "204":
+          description: User unfollowed
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /v1/users/feed:
+    get:
+      operationId: getFeed
+      summary: Get user feed
+
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 20
+
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+
+        - name: tags
+          in: query
+          required: false
+          schema:
+            type: string
+
+      responses:
+        "200":
+          description: User feed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PostList"
+
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+components:
+  schemas:
+
+    HealthResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          example: ok
+
+    Post:
+      type: object
+      required:
+        - id
+        - content
+        - title
+        - user_id
+        - tags
+        - version
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: integer
+          format: int64
+
+        content:
+          type: string
+
+        title:
+          type: string
+
+        user_id:
+          type: integer
+          format: int64
+
+        tags:
+          type: array
+          items:
+            type: string
+
+        version:
+          type: integer
+          format: int64
+
+        created_at:
+          type: string
+          format: date-time
+
+        updated_at:
+          type: string
+          format: date-time
+
+    PostCreate:
+      type: object
+      required:
+        - content
+        - title
+      properties:
+        content:
+          type: string
+          maxLength: 100
+
+        title:
+          type: string
+          maxLength: 1000
+
+        tags:
+          type: array
+          items:
+            type: string
+
+    PostUpdate:
+      type: object
+      properties:
+        content:
+          type: string
+          maxLength: 100
+
+        title:
+          type: string
+          maxLength: 1000
+
+        tags:
+          type: array
+          items:
+            type: string
+
+        version:
+          type: integer
+          format: int64
+
+    Comment:
+      type: object
+      required:
+        - id
+        - content
+        - user_id
+        - post_id
+        - created_at
+      properties:
+        id:
+          type: integer
+          format: int64
+
+        content:
+          type: string
+
+        user_id:
+          type: integer
+          format: int64
+
+        post_id:
+          type: integer
+          format: int64
+
+        created_at:
+          type: string
+          format: date-time
+
+    CommentCreate:
+      type: object
+      required:
+        - content
+      properties:
+        content:
+          type: string
+
+    User:
+      type: object
+      required:
+        - id
+        - username
+      properties:
+        id:
+          type: integer
+          format: int64
+
+        username:
+          type: string
+
+    PostList:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Post"
+
+    Error:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+
+  responses:
+
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
