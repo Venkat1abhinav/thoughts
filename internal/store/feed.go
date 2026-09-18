@@ -66,3 +66,7 @@ func (s *PostsStore) GetUserFeed(ctx context.Context, userID int64, fq Paginated
 
 	return feed, nil
 }
+
+func monx(int) error {
+	return nil
+}
