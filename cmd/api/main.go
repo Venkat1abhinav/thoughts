@@ -1,11 +1,12 @@
 package main
 
 import (
-	"log"
+	"os"
 
 	"github.com/owned_dragon/thoughts/internal/db"
 	"github.com/owned_dragon/thoughts/internal/env"
 	"github.com/owned_dragon/thoughts/internal/store"
+	"github.com/rs/zerolog"
 )
 
 //	@title			thoughts API
@@ -32,6 +33,19 @@ func main() {
 		env:      env.GetString("ENV", "development"),
 	}
 
+	var logger zerolog.Logger
+	if cfg.env == "development" {
+		logger = zerolog.New(zerolog.ConsoleWriter{
+			Out:        os.Stdout,
+			TimeFormat: "15:04:05",
+		}).With().Timestamp().Logger()
+	} else {
+		logger = zerolog.New(os.Stdout).
+			With().
+			Timestamp().
+			Logger()
+	}
+
 	db, err := db.New(
 		cfg.dbConfig.addr,
 		cfg.dbConfig.maxOpenConns,
@@ -39,8 +53,14 @@ func main() {
 		cfg.dbConfig.maxIdleTime,
 	)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal().
+			Err(err).
+			Msg("Failed to connect to the database")
 	}
+
+	logger.Info().Msg("connected to the database")
+
+	defer db.Close()
 
 	store := store.NewStorage(db)
 
@@ -48,10 +68,11 @@ func main() {
 		config:  cfg,
 		store:   store,
 		version: "0.0.1",
+		logger:  logger,
 	}
 	mux := app.mount()
 
 	if err := app.run(mux); err != nil {
-		log.Fatal(err)
+		logger.Fatal().Err(err).Msg("server failed")
 	}
 }

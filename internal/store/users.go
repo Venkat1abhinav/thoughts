@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type User struct {
@@ -17,8 +18,23 @@ type User struct {
 	FirstName string    `json:"first_name"`
 	LastName  string    `json:"last_name"`
 	Email     string    `json:"email"`
-	Password  []byte    `json:"-"`
+	Password  password  `json:"-"`
 	CreatedAt time.Time `json:"created_at"`
+}
+
+type password struct {
+	text *string
+	hash []byte
+}
+
+func (p *password) Set(text string) error {
+	hashed, err := bcrypt.GenerateFromPassword([]byte(text), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	p.text = &text
+	p.hash = hashed
+	return nil
 }
 
 type UsersStore struct {
@@ -79,7 +95,6 @@ func (s *UsersStore) GetByID(ctx context.Context, id int64) (*User, error) {
 		&user.Password,
 		&user.CreatedAt,
 	)
-
 	if err != nil {
 		switch {
 		case errors.Is(err, pgx.ErrNoRows):
@@ -90,7 +105,6 @@ func (s *UsersStore) GetByID(ctx context.Context, id int64) (*User, error) {
 	}
 
 	return &user, nil
-
 }
 
 func (s *UsersStore) CreateMany(

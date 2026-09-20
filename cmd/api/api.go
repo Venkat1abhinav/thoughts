@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"net/http"
 	"time"
 
@@ -9,12 +8,14 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/owned_dragon/thoughts/gen/api"
 	"github.com/owned_dragon/thoughts/internal/store"
+	"github.com/rs/zerolog"
 )
 
 type application struct {
 	config  config
 	store   store.Store
 	version string
+	logger  zerolog.Logger
 }
 
 var _ api.ServerInterface = (*application)(nil)
@@ -61,8 +62,7 @@ func (app *application) run(mux http.Handler) error {
 		IdleTimeout:  time.Minute,
 	}
 
-	log.Printf("starting the server at %s", app.config.addr)
-
+	app.logger.Info().Str("addr", app.config.addr).Msg("server has started")
 	err := serve.ListenAndServe()
 	return err
 }
